@@ -1,15 +1,15 @@
 import os
 
-work_dirs = "--work-dir work_dirs/drown_walk"
+work_dirs = "--work-dir work_dirs/cat_dog"
 
 configs = {
-    "customized_cfg/drown_2cls/mobilenet_v2.py": "mobile",
-    # "customized_cfg/drown_2cls/resnet18.py": "resnet18",
-    # "customized_cfg/drown_2cls/resnet34.py": "resnet34",
-    # "customized_cfg/drown_2cls/resnetv1d50.py": "resnetv1d50",
-    # "customized_cfg/drown_2cls/resnext50.py": "resnext50",
-    # "customized_cfg/drown_2cls/seresnet50.py": "seresnet50",
-    "customized_cfg/drown_2cls/shufflenet_v2.py": "shuffle",
+    "customized_cfg/CatDog/mobilenet_v2.py": "mobile",
+    "customized_cfg/CatDog/resnet18.py": "resnet18",
+    "customized_cfg/CatDog/resnet34.py": "resnet34",
+    "customized_cfg/CatDog/resnetv1d50.py": "resnetv1d50",
+    "customized_cfg/CatDog/resnext50.py": "resnext50",
+    "customized_cfg/CatDog/seresnet50.py": "seresnet50",
+    "customized_cfg/CatDog/shufflenet_v2.py": "shuffle",
 }
 
 cmds = []
