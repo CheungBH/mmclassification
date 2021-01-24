@@ -2,6 +2,8 @@
 
 ## Introduction
 
+[ALGORITHM]
+
 ```latex
 @inproceedings{he2016deep,
   title={Deep residual learning for image recognition},
