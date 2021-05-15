@@ -6,10 +6,26 @@ import torch
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import DistSamplerSeedHook, build_optimizer, build_runner
 
-from mmcls.core import (DistEvalHook, DistOptimizerHook, EvalHook,
-                        Fp16OptimizerHook)
+from mmcls.core import DistOptimizerHook
 from mmcls.datasets import build_dataloader, build_dataset
 from mmcls.utils import get_root_logger
+
+# TODO import eval hooks from mmcv and delete them from mmcls
+try:
+    from mmcv.runner.hooks import EvalHook, DistEvalHook
+except ImportError:
+    warnings.warn('DeprecationWarning: EvalHook and DistEvalHook from mmcls '
+                  'will be deprecated.'
+                  'Please install mmcv through master branch.')
+    from mmcls.core import EvalHook, DistEvalHook
+
+# TODO import optimizer hook from mmcv and delete them from mmcls
+try:
+    from mmcv.runner import Fp16OptimizerHook
+except ImportError:
+    warnings.warn('DeprecationWarning: FP16OptimizerHook from mmcls will be '
+                  'deprecated. Please install mmcv>=1.1.4.')
+    from mmcls.core import Fp16OptimizerHook
 
 
 def set_random_seed(seed, deterministic=False):
@@ -37,6 +53,7 @@ def train_model(model,
                 distributed=False,
                 validate=False,
                 timestamp=None,
+                device='cuda',
                 meta=None):
     logger = get_root_logger(cfg.log_level)
 
@@ -66,8 +83,13 @@ def train_model(model,
             broadcast_buffers=False,
             find_unused_parameters=find_unused_parameters)
     else:
-        model = MMDataParallel(
-            model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
+        if device == 'cuda':
+            model = MMDataParallel(
+                model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
+        elif device == 'cpu':
+            model = MMDataParallel(model.cpu())
+        else:
+            raise ValueError(F'unsupported device name {device}.')
 
     # build runner
     optimizer = build_optimizer(model, cfg.optimizer)

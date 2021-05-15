@@ -3,7 +3,7 @@ import torch
 
 
 def average_precision(pred, target):
-    """ Calculate the average precision for a single class
+    """Calculate the average precision for a single class.
 
     AP summarizes a precision-recall curve as the weighted mean of maximum
     precisions obtained for any r'>r, where r is the recall:
@@ -43,7 +43,7 @@ def average_precision(pred, target):
 
 
 def mAP(pred, target):
-    """ Calculate the mean average precision with respect of classes
+    """Calculate the mean average precision with respect of classes.
 
     Args:
         pred (torch.Tensor | np.ndarray): The model prediction with shape
@@ -57,8 +57,8 @@ def mAP(pred, target):
         float: A single float as mAP value.
     """
     if isinstance(pred, torch.Tensor) and isinstance(target, torch.Tensor):
-        pred = pred.numpy()
-        target = target.numpy()
+        pred = pred.detach().cpu().numpy()
+        target = target.detach().cpu().numpy()
     elif not (isinstance(pred, np.ndarray) and isinstance(target, np.ndarray)):
         raise TypeError('pred and target should both be torch.Tensor or'
                         'np.ndarray')

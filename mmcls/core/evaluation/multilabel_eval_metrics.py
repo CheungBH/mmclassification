@@ -6,8 +6,8 @@ import torch
 
 def average_performance(pred, target, thr=None, k=None):
     """Calculate CP, CR, CF1, OP, OR, OF1, where C stands for per-class
-        average, O stands for overall average, P stands for precision, R
-        stands for recall and F1 stands for F1-score
+    average, O stands for overall average, P stands for precision, R stands for
+    recall and F1 stands for F1-score.
 
     Args:
         pred (torch.Tensor | np.ndarray): The model prediction with shape
@@ -24,8 +24,8 @@ def average_performance(pred, target, thr=None, k=None):
         tuple: (CP, CR, CF1, OP, OR, OF1)
     """
     if isinstance(pred, torch.Tensor) and isinstance(target, torch.Tensor):
-        pred = pred.numpy()
-        target = target.numpy()
+        pred = pred.detach().cpu().numpy()
+        target = target.detach().cpu().numpy()
     elif not (isinstance(pred, np.ndarray) and isinstance(target, np.ndarray)):
         raise TypeError('pred and target should both be torch.Tensor or'
                         'np.ndarray')

@@ -37,8 +37,10 @@ def _demo_mm_inputs(input_shape, num_classes):
 def pytorch2onnx(model,
                  input_shape,
                  opset_version=11,
+                 dynamic_export=False,
                  show=False,
                  output_file='tmp.onnx',
+                 do_simplify=False,
                  verify=False):
     """Export Pytorch model to ONNX model and verify the outputs are same
     between Pytorch and ONNX.
@@ -64,29 +66,79 @@ def pytorch2onnx(model,
 
     # replace original forward function
     origin_forward = model.forward
-    model.forward = partial(model.forward, return_loss=False)
-
+    model.forward = partial(model.forward, img_metas={}, return_loss=False)
     register_extra_symbolics(opset_version)
+
+    # support dynamic shape export
+    if dynamic_export:
+        dynamic_axes = {
+            'input': {
+                0: 'batch',
+                2: 'width',
+                3: 'height'
+            },
+            'probs': {
+                0: 'batch'
+            }
+        }
+    else:
+        dynamic_axes = {}
+
     with torch.no_grad():
         torch.onnx.export(
             model, (img_list, ),
             output_file,
+            input_names=['input'],
+            output_names=['probs'],
             export_params=True,
             keep_initializers_as_inputs=True,
+            dynamic_axes=dynamic_axes,
             verbose=show,
             opset_version=opset_version)
         print(f'Successfully exported ONNX model: {output_file}')
     model.forward = origin_forward
 
+    if do_simplify:
+        from mmcv import digit_version
+        import onnxsim
+
+        min_required_version = '0.3.0'
+        assert digit_version(mmcv.__version__) >= digit_version(
+            min_required_version
+        ), f'Requires to install onnx-simplify>={min_required_version}'
+
+        if dynamic_axes:
+            input_shape = (input_shape[0], input_shape[1], input_shape[2] * 2,
+                           input_shape[3] * 2)
+        else:
+            input_shape = (input_shape[0], input_shape[1], input_shape[2],
+                           input_shape[3])
+        imgs = _demo_mm_inputs(input_shape, model.head.num_classes).pop('imgs')
+        input_dic = {'input': imgs.detach().cpu().numpy()}
+        input_shape_dic = {'input': list(input_shape)}
+
+        onnxsim.simplify(
+            output_file,
+            input_shapes=input_shape_dic,
+            input_data=input_dic,
+            dynamic_input_shape=dynamic_export)
     if verify:
         # check by onnx
         import onnx
         onnx_model = onnx.load(output_file)
         onnx.checker.check_model(onnx_model)
 
+        # test the dynamic model
+        if dynamic_export:
+            dynamic_test_inputs = _demo_mm_inputs(
+                (input_shape[0], input_shape[1], input_shape[2] * 2,
+                 input_shape[3] * 2), model.head.num_classes)
+            imgs = dynamic_test_inputs.pop('imgs')
+            img_list = [img[None, :] for img in imgs]
+
         # check the numerical value
         # get pytorch output
-        pytorch_result = model(img_list, return_loss=False)[0]
+        pytorch_result = model(img_list, img_metas={}, return_loss=False)[0]
 
         # get onnx output
         input_all = [node.name for node in onnx_model.graph.input]
@@ -114,11 +166,20 @@ def parse_args():
     parser.add_argument('--output-file', type=str, default='tmp.onnx')
     parser.add_argument('--opset-version', type=int, default=11)
     parser.add_argument(
+        '--simplify',
+        action='store_true',
+        help='Whether to simplify onnx model.')
+    parser.add_argument(
         '--shape',
         type=int,
         nargs='+',
         default=[224, 224],
         help='input image size')
+    parser.add_argument(
+        '--dynamic-export',
+        action='store_true',
+        help='Whether to export ONNX with dynamic input shape. \
+            Defaults to False.')
     args = parser.parse_args()
     return args
 
@@ -151,5 +212,7 @@ if __name__ == '__main__':
         input_shape,
         opset_version=args.opset_version,
         show=args.show,
+        dynamic_export=args.dynamic_export,
         output_file=args.output_file,
+        do_simplify=args.simplify,
         verify=args.verify)
